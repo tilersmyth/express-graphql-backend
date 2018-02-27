@@ -1,6 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { graphqlExpress, graphiqlExpress } from 'apollo-server-express';
+import { graphqlExpress, graphiqlExpress } from 'graphql-server-express';
 import { makeExecutableSchema } from 'graphql-tools';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
@@ -27,12 +27,7 @@ const addUser = async (req, res, next) => {
       req.user = user;
     } catch (err) {
       const refreshToken = req.headers['x-refresh-token'];
-      const newTokens = await refreshTokens(
-        token,
-        refreshToken,
-        models,
-        SECRET,
-      );
+      const newTokens = await refreshTokens(token, refreshToken, models, SECRET);
       if (newTokens.token && newTokens.refreshToken) {
         res.set('Access-Control-Expose-Headers', 'x-token, x-refresh-token');
         res.set('x-token', newTokens.token);
@@ -48,22 +43,23 @@ app.use(cors('*'));
 app.use(addUser);
 
 app.get(
-  '/graphiql', 
-  graphiqlExpress({ 
-    endpointURL: '/graphql' })
-  );
-
-app.use(
-  '/graphql', 
-  bodyParser.json(), 
-  graphqlExpress(req => ({ 
-    schema, 
-    context: { 
-      models,
-      SECRET,
-      user: req.user
-    } 
-  }))
+  '/graphiql',
+  graphiqlExpress({
+    endpointURL: '/graphql',
+  }),
 );
 
-models.sequelize.sync().then(()=> app.listen(3000));
+app.use(
+  '/graphql',
+  bodyParser.json(),
+  graphqlExpress(req => ({
+    schema,
+    context: {
+      models,
+      SECRET,
+      user: req.user,
+    },
+  })),
+);
+
+models.sequelize.sync().then(() => app.listen(3000));
